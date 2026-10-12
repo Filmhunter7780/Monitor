@@ -137,6 +137,7 @@ def key(row):
 
 # ---------- Основной цикл ----------
 def main():
+    last_error = None
     threading.Thread(target=run_server, daemon=True).start()
     chat_id = get_chat_id()
     notify(chat_id, "✅ Бот слежения за посылками запущен")
@@ -144,6 +145,7 @@ def main():
         try:
             rows = fetch_rows()
             current = {key(r): r for r in rows}
+            print(f"Проверка: найдено {len(current)} записей", flush=True)
             old = load_state()
             if old is None:
                 save_state(current)
@@ -155,10 +157,15 @@ def main():
                     elif old[k] != r:
                         notify(chat_id, f"📦 Изменение:\n{r}\n\nБыло:\n{old[k]}")
                 save_state(current)
+            last_error = None
         except Exception as e:
-            print("Ошибка:", e, flush=True)
+            print("Ошибка:", repr(e), flush=True)
+            if str(e) != last_error:  # сообщаем об ошибке один раз
+                last_error = str(e)
+                notify(chat_id, f"⚠️ Ошибка проверки: {repr(e)[:500]}")
         time.sleep(INTERVAL)
 
 
 if __name__ == "__main__":
     main()
+    
