@@ -1,17 +1,16 @@
 """
 Бот слежения за посылками anytrack.kz -> Telegram.
-Для Render (Web Service, Docker) + UptimeRobot.
+Для Render (Web Service) + UptimeRobot, чтобы не засыпал.
 """
 import json
 import os
-import re
 import time
 import threading
 import requests
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from playwright.sync_api import sync_playwright
 
-TG_TOKEN = os.environ["TG_TOKEN"]  # токен бота — в Environment на Render
+TG_TOKEN = os.environ["TG_TOKEN"] # токен бота — в Environment на Render
 LOGIN = os.environ.get("TRACK_LOGIN", "1324")
 PASSWORD = os.environ.get("TRACK_PASSWORD", "Savage21")
 URL = "https://7999.anytrack.kz/public/#/my-tracks"
@@ -66,24 +65,6 @@ def notify(chat_id, text):
 
 
 # ---------- Парсинг сайта ----------
-JS_PARCELS = """() => {
-  const cnt = t => (t.match(/Статус:/g) || []).length;
-  const out = new Set();
-  document.querySelectorAll('*').forEach(el => {
-    if (el.children.length === 0 && /^Статус:/.test(el.textContent.trim())) {
-      let node = el;
-      while (node.parentElement &&
-             cnt(node.parentElement.innerText) === 1 &&
-             !node.parentElement.innerText.includes('Мои посылки')) {
-        node = node.parentElement;
-      }
-      out.add(node.innerText.trim().replace(/\\s+/g, ' '));
-    }
-  });
-  return [...out];
-}"""
-
-
 def fetch_rows():
     with sync_playwright() as p:
         browser = p.chromium.launch(
@@ -108,7 +89,10 @@ def fetch_rows():
                     page.goto(URL, wait_until="networkidle")
                 time.sleep(2)
 
-            rows = page.evaluate(JS_PARCELS)
+            rows = page.eval_on_selector_all(
+                "tr, .track, .track-item, .v-list-item, mat-row, .el-table__row",
+                "els => els.map(e => e.innerText.trim().replace(/\\s+/g, ' ')).filter(t => t.length > 5)",
+            )
             if not rows:
                 rows = [page.inner_text("body").strip()]
             return rows
@@ -128,16 +112,11 @@ def save_state(s):
 
 
 def key(row):
-    m = re.search(r"\b\d{9,}\b", row)  # трек-номер
-    if m:
-        return m.group(0)
-    m = re.search(r"\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}", row)  # дата
-    return m.group(0) if m else row[:30]
+    return row.split(" ")[0]
 
 
 # ---------- Основной цикл ----------
 def main():
-    last_error = None
     threading.Thread(target=run_server, daemon=True).start()
     chat_id = get_chat_id()
     notify(chat_id, "✅ Бот слежения за посылками запущен")
@@ -145,7 +124,6 @@ def main():
         try:
             rows = fetch_rows()
             current = {key(r): r for r in rows}
-            print(f"Проверка: найдено {len(current)} записей", flush=True)
             old = load_state()
             if old is None:
                 save_state(current)
@@ -157,15 +135,10 @@ def main():
                     elif old[k] != r:
                         notify(chat_id, f"📦 Изменение:\n{r}\n\nБыло:\n{old[k]}")
                 save_state(current)
-            last_error = None
         except Exception as e:
-            print("Ошибка:", repr(e), flush=True)
-            if str(e) != last_error:  # сообщаем об ошибке один раз
-                last_error = str(e)
-                notify(chat_id, f"⚠️ Ошибка проверки: {repr(e)[:500]}")
+            print("Ошибка:", e, flush=True)
         time.sleep(INTERVAL)
 
 
 if __name__ == "__main__":
     main()
-    
