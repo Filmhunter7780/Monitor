@@ -1,2 +1,3 @@
-playwright==1.48.0
+playwright
+greenlet>=3.2.4
 requests
