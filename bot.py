@@ -10,7 +10,7 @@ import requests
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from playwright.sync_api import sync_playwright
 
-TG_TOKEN = os.environ["8755313794:AAEq9SVhCe_My_nkRNUdu3ekboMZQZ-AqUY"]  # токен бота — в Environment на Render
+TG_TOKEN = "8755313794:AAEq9SVhCe_My_nkRNUdu3ekboMZQZ-AqUY" # токен бота — в Environment на Render
 LOGIN = os.environ.get("TRACK_LOGIN", "1324")
 PASSWORD = os.environ.get("TRACK_PASSWORD", "Savage21")
 URL = "https://7999.anytrack.kz/public/#/my-tracks"
