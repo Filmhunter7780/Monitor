@@ -21,7 +21,7 @@ TG_TOKEN = os.environ["TG_TOKEN"]
 LOGIN = os.environ["TRACK_LOGIN"]
 PASSWORD = os.environ["TRACK_PASSWORD"]
 URL = "https://7999.anytrack.kz/public/#/my-tracks"
-INTERVAL = int(os.environ.get("CHECK_INTERVAL", "600"))  # секунд
+INTERVAL = int(os.environ.get("CHECK_INTERVAL", "180"))  # секунд
 STATE_FILE = "state_v2.json"
 CHAT_FILE = "chat_id.txt"
 
